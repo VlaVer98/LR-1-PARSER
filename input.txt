@@ -1,0 +1,11 @@
+int f1(int a, double b, char c[10]);
+namespace N1 {
+ namespace N2 {
+ void f2(void);
+ void f3();
+ int f4(long int, ...);
+ }
+ void f5(int, unsigned char) {}
+ void f5(int) {}
+ void f5(double) {}
+}
