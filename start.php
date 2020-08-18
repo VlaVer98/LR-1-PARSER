@@ -15,6 +15,13 @@ if(!empty($grammer)) {
     if(!empty($rules) && !empty($neterminals) && !empty($terminals)){
         $actions = getActions($grammer);
         list($states, $garphTransition) = getStates($rules, $neterminals, $terminals, $actions);
+        foreach($states as $keyState => $state) {
+            echo '-----------------'.$keyState."-------------------\n";
+            foreach($state as $rule) {
+                echo $rule[3] . "\n";
+            }
+        }
+        die;
         $tableOfParse = getTableOfParse($states, $rules, $garphTransition, $neterminals, $terminals, $actions);
     } else {
         die('Неккоректно составленны правила');
@@ -54,16 +61,34 @@ $MAP = [
     'namespace' => []
 ];
 
+$arr_en = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+$arr_en2 = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+$arr_num = ['0','1','2','3','4','5','6','7','8','9'];
+
 $i = 0;
 while($i<count($chain)) {
     $lastStateInStack = array_pop($stackState);
-    $newState = $tableOfParse[$lastStateInStack][$chain[$i]];
+    if(in_array($chain[$i], $arr_en) || in_array($chain[$i], $arr_en2)) {
+        $symbol = '#aZ#';
+    } else if (in_array($chain[$i], $arr_num)) {
+        $symbol = '#09#';
+    } else {
+        $symbol = $chain[$i];
+    }
+    $newState = $tableOfParse[$lastStateInStack][$symbol];
     if($newState === HALT) {
         echo "Корректное описание";
         die;
     } else if(substr($newState, 0, 1)==="S") {
+        if(in_array($chain[$i], $arr_en) || in_array($chain[$i], $arr_en2)) {
+            $symbol = '#aZ#';
+        } else if (in_array($chain[$i], $arr_num)) {
+            $symbol = '#09#';
+        } else {
+            $symbol = $chain[$i];
+        }
         array_push($stackState, $lastStateInStack);
-        array_push($stackChars, $chain[$i]);
+        array_push($stackChars, $symbol);
         $newState = $tableOfParse[$stackState[count($stackState)-1]][$stackChars[count($stackChars)-1]];
         array_push($stackState, (int)substr($newState, 1));
         if(preg_match_all('/-(.+?)(?=$|-)/', $newState, $matches)) {
