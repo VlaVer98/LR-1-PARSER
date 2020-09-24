@@ -11,17 +11,9 @@ if(!empty($grammer)) {
     $rules = readGrammer($grammer);
     $neterminals = getNeterminal($rules);
     $terminals = getTerminal($rules, $neterminals);
-    //debug($rules);
     if(!empty($rules) && !empty($neterminals) && !empty($terminals)){
         $actions = getActions($grammer);
         list($states, $garphTransition) = getStates($rules, $neterminals, $terminals, $actions);
-        foreach($states as $keyState => $state) {
-            echo '-----------------'.$keyState."-------------------\n";
-            foreach($state as $rule) {
-                echo $rule[3] . "\n";
-            }
-        }
-        die;
         $tableOfParse = getTableOfParse($states, $rules, $garphTransition, $neterminals, $terminals, $actions);
     } else {
         die('Неккоректно составленны правила');
@@ -41,37 +33,41 @@ foreach($chain as $key => $char) {
 $stackChars = [];
 $stackState = [0];
 
-$currentNamespace = [];
+$word = '';
+$stackWords = [];
 $currentFunc = [];
-$nameArgsCurrentFunc = [];
-$nameArg = '';
-$name = '';
-$AD = [
+$currentNamespace = [];
+$structProgram = [
     'global' => [
-        'ADFUNC' => [],
-        'prototypeFunc' => []
+        'prototypes' => [],
+        'funcs' => [],
+        'namespaces' => []
     ],
-    'namespace' => [],
-];
-$MAP = [
-    'global' => [
-        'funcs' =>[],
-        'namespaces' => [],
-    ],
-    'namespace' => []
+    'local' => []
 ];
 
-$arr_en = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
-$arr_en2 = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-$arr_num = ['0','1','2','3','4','5','6','7','8','9'];
+$arr_en = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    '0','1','2','3','4','5','6','7','8','9',
+    '_', '.', '[', ']'];
+$keywords = ['alignas', 'alignof', 'and', 'and_eq', 'asm', 'auto', 'bitand', 'bitor', 'bool', 'break', 'case', 'catch', 'char', 'char16_t'
+    , 'char32_t', 'class','compl','const','constexpr','const_cast','continue', 'decltype', 'default', 'delete', 'do', 'double', 'dynamic_cast'
+    , 'else', 'enum', 'explicit', 'export', 'extern', 'false', 'float', 'for', 'friend', 'goto', 'if', 'inline', 'int', 'long', 'mutable'
+    , 'namespace', 'new', 'noexcept', 'not', 'not_eq', 'nullptr', 'operator', 'or', 'or_eq', 'private', 'protected', 'public', 'register'
+    , 'reinterpret_cast', 'return', 'short', 'signed', 'sizeof', 'static', 'static_assert', 'static_cast', 'struct', 'switch', 'template'
+    , 'this', 'thread_local', 'throw', 'true', 'try', 'typedef', 'typeid', 'typename', 'union', 'unsigned', 'using', 'virtual', 'void'
+    , 'volatile', 'wchar_t', 'while', 'xor', 'xor_eq'
+    ];
+$types = ['bool', 'char', 'signedchar', 'unsignedchar', 'wchar_t', 'char16_t', 'char32_t', 'short', 'shortint', 'signedshortint', 'signedshort',
+    'unsignedshort', 'unsignedshortint', 'int', 'signedint', 'signed', 'unsignedint', 'unsigned', 'long', 'longint', 'signedlongint', 'signedlong',
+    'unsignedlong', 'unsignedlongint', 'longlong', 'longlongint', 'signedlonglong', 'unsignedlonglong', 'float', 'double', 'longdouble',
+    ];
 
 $i = 0;
 while($i<count($chain)) {
     $lastStateInStack = array_pop($stackState);
-    if(in_array($chain[$i], $arr_en) || in_array($chain[$i], $arr_en2)) {
-        $symbol = '#aZ#';
-    } else if (in_array($chain[$i], $arr_num)) {
-        $symbol = '#09#';
+    if(in_array($chain[$i], $arr_en)) {
+        $symbol = '#symbols#';
     } else {
         $symbol = $chain[$i];
     }
@@ -80,10 +76,8 @@ while($i<count($chain)) {
         echo "Корректное описание";
         die;
     } else if(substr($newState, 0, 1)==="S") {
-        if(in_array($chain[$i], $arr_en) || in_array($chain[$i], $arr_en2)) {
-            $symbol = '#aZ#';
-        } else if (in_array($chain[$i], $arr_num)) {
-            $symbol = '#09#';
+        if(in_array($chain[$i], $arr_en)/* || in_array($chain[$i], $arr_en2)*/) {
+            $symbol = '#symbols#';
         } else {
             $symbol = $chain[$i];
         }
@@ -112,7 +106,7 @@ while($i<count($chain)) {
         array_push($stackState, (int)substr($newState, 1));
         if(preg_match_all('/-(.+?)(?=$|-)/', $newState, $matches)) {
             foreach($matches[1] as $namefunc) {
-                if(!call_user_func($namefunc, $chain[$i-1])) {
+                if(!call_user_func($namefunc, $chain[$i-1], $i)) {
                     showError($i);
                 }
             }
@@ -137,207 +131,304 @@ function showError($pos) {
     die;
 }
 
-function A0 ($symbol) {
-    global $name;
-    $name = '';
-    return true;
-}
-
 function A1 ($symbol) {
-    global $name;
-    $name .= $symbol;
+    global $word;
+    $word .= $symbol;
     return true;
 }
-
-function A2 () {
-    global $name;
-    global $currentFunc;
-
-    $currentFunc[] = $name;
-    $name = '';
+function A2() {
+    global $stackWords;
+    global $word;
+    global $i;
+    $stackWords[] = [$word, $i-1];
+    $word = '';
     return true;
 }
-
-function A3 () {
+function A3() {
+    global $stackWords;
+    global $keywords;
     global $currentNamespace;
-    global $name;
-
-    if(!addNamespaceInMap()) return false;
-    array_push($currentNamespace, $name);
-    $name = '';
-
-    return true;
-}
-
-function addNamespaceInMap() {
-    global $currentNamespace;
-    global $name;
-    global $MAP;
-
-    if(empty($currentNamespace)) {
-        if(in_array($name, $MAP['global']['funcs'])) {
-            echo 'У функции или прототипа совпадает имя(' . $name . ") с namespace\n";
-            return false;
-        }
-        $MAP['global']['namespaces'][] = $name;
-    } else {
-        if(empty($MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['funcs'])) {
-            $MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['namespaces'][] = $name;
-            return true;
-        }
-        if(in_array($name, $MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['funcs'])) {
-            echo 'У функции или прототипа совпадает имя(' . $name . ") с namespace\n";
-            return false;
-        }
-        $MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['namespaces'][] = $name;
-    }
-    return true;
-}
-
-function A4 ($symbol) {
-    global $currentNamespace;
-    global $currentFunc;
-    global $nameArgsCurrentFunc;
-    global $AD;
-    global $MAP;
-
-    if($symbol === ';') {
-        if(empty($currentNamespace)) {
-            if(!addFuncInMap()) return false;
-            $AD['global']['prototypeFunc'][] = $currentFunc;
-            $currentFunc = [];
-            $nameArgsCurrentFunc = [];
-        } else {
-            if(!addFuncInMap()) return false;
-            $AD['namespace'][$currentNamespace[count($currentNamespace)-1]]['prototypeFunc'][] = $currentFunc;
-            $currentFunc = [];
-            $nameArgsCurrentFunc = [];
-        }
-    } else {
-        if(empty($currentNamespace)) {
-            if(compareAdFuncInGlobal()) return false;
-            if(!addFuncInMap()) return false;
-            $AD['global']['ADFUNC'][] = $currentFunc;
-            $currentFunc = [];
-            $nameArgsCurrentFunc = [];
-        } else {
-            if(compareAdFuncInNamespace()) return false;
-            if(!addFuncInMap()) return false;
-            $AD['namespace'][$currentNamespace[count($currentNamespace)-1]]['ADFUNC'][] = $currentFunc;
-            $currentFunc = [];
-            $nameArgsCurrentFunc = [];
-        }
-    }
-    return true;
-}
-
-function addFuncInMap() {
-    global $currentFunc;
-    global $currentNamespace;
-    global $MAP;
-
-    if(empty($currentNamespace)) {
-        if(empty($MAP['global']['namespaces'])) {
-            $MAP['global']['funcs'][] = $currentFunc[0];
-            return true;
-        }
-        if(in_array($currentFunc[0], $MAP['global']['namespaces'])) {
-            echo 'У функции или прототипа совпадает имя(' . $name . ") с namespace\n";
-            return false;
-        }
-        $MAP['global']['funcs'][] = $currentFunc[0];
-    } else {
-        if(!isset($MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['namespaces'])) {
-            $MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['funcs'][] = $currentFunc[0];
-            return true;
-        }
-        if(in_array($currentFunc[0], $MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['namespaces'])) {
-            echo 'У функции или прототипа совпадает имя(' . $currentFunc[0] . ") с namespace\n";
-            return false;
-        }
-        $MAP['namespace'][$currentNamespace[count($currentNamespace)-1]]['funcs'][] = $currentFunc[0];
-    }
-    return true;
-}
-
-function compareAdFuncInGlobal() {
-    global $AD;
-    global $currentFunc;
-
-    foreach($AD['global']['ADFUNC'] as $func) {
-        if($func[0] === $currentFunc[0] && count($func) === count($currentFunc)) {
-            $args1 = [];
-            $args2 = [];
-            for($i=1;$i<count($func);$i++){
-                $args1[] = $func[$i];
-                $args2[] = $currentFunc[$i];
-            }
-            if(empty(array_diff($args1, $args2))) {
-                echo 'Функция c такими аргуметами и именем ' . $currentFunc[0] . " уже есть\n";
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-function compareAdFuncInNamespace() {
-    global $AD;
-    global $currentFunc;
-    global $currentNamespace;
-
-    if(!isset($AD['namespace'][$currentNamespace[count($currentNamespace)-1]]['ADFUNC'])) return false;
-
-    foreach($AD['namespace'][$currentNamespace[count($currentNamespace)-1]]['ADFUNC'] as $func) {
-        if($func[0] === $currentFunc[0] && count($func) === count($currentFunc)) {
-            $args1 = [];
-            $args2 = [];
-            for($i=1;$i<count($func);$i++){
-                $args1[] = $func[$i];
-                $args2[] = $currentFunc[$i];
-            }
-            if(empty(array_diff($args1, $args2))) {
-                echo 'Функция c такими аргуметами и именем ' . $currentFunc[0] . " уже есть\n";
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-function A5() {
-    global $currentNamespace;
-    array_pop($currentNamespace);
-    return true;
-}
-
-function A6() {
-    global $nameArgsCurrentFunc;
-    global $nameArg;
-    $nameArgsCurrentFunc[] = $nameArg;
-    $nameArg = '';
-    return compareArgs();
-}
-
-function A7($symbol) {
-    global $nameArg;
-    $nameArg .= $symbol;
-    return true;
-}
-
-function A8($symbol) {
-    global $nameArg;
-    $nameArg = '';
-    return true;
-}
-
-function compareArgs() {
-    global $nameArgsCurrentFunc;
-    $arr = array_unique($nameArgsCurrentFunc);
-    if(count($arr) !== count($nameArgsCurrentFunc)) {
-        echo "Аргумент ".$nameArgsCurrentFunc[count($nameArgsCurrentFunc)-1].", уже есть\n";
+    global $structProgram;
+    global $i;
+    if($stackWords[0][0] !== 'namespace') {
+        echo "Недопустимое ключевое слово.\n";
+        $i = $stackWords[0][1];
         return false;
     }
+    $word = $stackWords[1][0];
+    $match = preg_match ('/^[_[:alpha:]][[:alnum:]_]*/', $stackWords[1][0]);
+    if(in_array($stackWords[1][0], $keywords)) {
+        echo "{$stackWords[1][0]} является зарезервированным именем!\n";
+        $i = $stackWords[1][1];
+        return false;
+    }else if($match === 0 || $match === false) {
+        echo "Ошибка именования!";
+        $i = $stackWords[1][1];
+        return false;
+    }
+    if(empty($currentNamespace)) {
+        foreach ($structProgram['global']['funcs'] as $name) {
+            if($name['id'] === $stackWords[1][0]) {
+                echo "{$stackWords[1][0]} конфликт имен!\n";
+                $i = $stackWords[1][1];
+                return false;
+            }
+        }
+        foreach ($structProgram['global']['prototypes'] as $name) {
+            if($name['id'] === $stackWords[1][0]) {
+                echo "{$stackWords[1][0]} конфликт имен!\n";
+                $i = $stackWords[1][1];
+                return false;
+            }
+        }
+        $structProgram['global']['namespaces'][] = $stackWords[1][0];
+    }else {
+        if(isset($structProgram['local'][$currentNamespace[(count($currentNamespace)-1)]]['funcs'])){
+            foreach ($structProgram['local'][$currentNamespace[(count($currentNamespace)-1)]]['funcs'] as $name) {
+                if($name['id'] === $stackWords[1][0]) {
+                    echo "{$stackWords[1][0]} конфликт имен!\n";
+                    $i = $stackWords[1][1];
+                    return false;
+                }
+            }
+        }
+        if(isset($structProgram['local'][$currentNamespace[(count($currentNamespace)-1)]]['prototypes'])){
+            foreach ($structProgram['local'][$currentNamespace[(count($currentNamespace)-1)]]['prototypes'] as $name) {
+                if($name['id'] === $stackWords[1][0]) {
+                    echo "{$stackWords[1][0]} конфликт имен!\n";
+                    $i = $stackWords[1][1];
+                    return false;
+                }
+            }
+        }
+        $structProgram['local'][$currentNamespace[(count($currentNamespace)-1)]]['namespaces'][] = $stackWords[1][0];
+    }
+    $currentNamespace[] = $stackWords[1][0];
+    $stackWords = [];
+    return true;
+}
+function A4() {
+    global $stackWords;
+    global $keywords;
+    global $types;
+    global $currentFunc;
+    global $currentNamespace;
+    global $structProgram;
+    global $i;
+    $name = array_pop($stackWords);
+    foreach($stackWords as $word) {
+        $type .= $word[0];
+    }
+    if(!in_array($type, $types) && $type !== 'void') {
+        echo "Недопустимый тип.\n";
+        $i = $stackWords[count($stackWords)-1][1];
+        return false;
+    }
+    $match = preg_match ('/^[_[:alpha:]][[:alnum:]_]*/', $name[0]);
+    if(in_array($name[0], $keywords)) {
+        echo "{$name[0]} является зарезервированным именем.\n";
+        $i = $name[1];
+        return false;
+    }else if($match === 0 || $match === false) {
+        echo "Ошибка именования.\n";
+        $i = $name[1];
+        return false;
+    }
+    if(empty($currentNamespace)) {
+        foreach ($structProgram['global']['namespaces'] as $nameNamespace) {
+            if($nameNamespace === $name[0]) {
+                echo "{$name[0]} конфликт имен!\n";
+                $i = $name[1];
+                return false;
+            }
+        }
+    }else {
+        if(isset($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['namespaces'])) {
+            foreach ($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['namespaces'] as $nameNamespace) {
+                if($nameNamespace === $name[0]) {
+                    echo "{$name[0]} конфликт имен!\n";
+                    $i = $name[1];
+                    return false;
+                }
+            }
+        }
+    }
+    $currentFunc['id'] = $name[0];
+    $stackWords = [];
+    return true;
+}
+function A5() {
+    global $stackWords;
+    global $keywords;
+    global $types;
+    global $currentFunc;
+    global $i;
+    if(empty($stackWords)) {
+        return true;
+    }
+    $params = [];
+    $numParam = 0;
+    $type = '';
+    foreach($stackWords as $stackWord) {
+        if($stackWord[0] === ',') {
+            $numParam++;
+            continue;
+        }
+        $params[$numParam][] = [$stackWord[0], $stackWord[1]];
+    }
+    for($j = 0; $j<count($params); $j++) {
+        for($k = 0; $k<count($params[$j]); $k++) {
+            if(in_array($params[$j][$k][0], $types)) {
+                $type .= $params[$j][$k][0];
+            }else if($params[$j][$k][0] === 'void' && $k === 0) {
+                if(isset($params[$j][$k+1][0]) || isset($params[$j+1][$k][0])) {
+                    echo "После void не должно быть параметров.\n";
+                    $i = $params[$j][$k][1];
+                    return false;
+                }
+                $currentFunc['args'][] = ['type' => 'void'];
+                $stackWords = [];
+                return true;
+            }else if($params[$j][$k][0] === '...') {
+                if(isset($params[$j][$k+1][0]) || isset($params[$j+1][$k][0])) {
+                    echo "После ... не должно быть параметров.\n";
+                    $i = $params[$j][$k][1];
+                    return false;
+                }
+                $currentFunc['args'][] = ['type' => '...'];
+                $stackWords = [];
+                return true;
+            }else {
+                if(empty($type)) {
+                    echo "Недопустимое обьявление.\n";
+                    $i = $params[$j][$k][1];
+                    return false;
+                }
+                $match = preg_match ('/^[_[:alpha:]][[:alnum:]_]*(\[[[:digit:]]+\])*$/', $params[$j][$k][0]);
+                if($match === 0 || $match === false) {
+                    echo "Ошибка именования.\n";
+                    $i = $params[$j][$k][1];
+                    return false;
+                }
+                $str = strstr($params[$j][$k][0], '[', true);
+                if($str !== false) {
+                    if(in_array($str, $keywords)) {
+                        echo "{$params[$j][$k][0]} является зарезервированным именем.\n";
+                        $i = $params[$j][$k][1];
+                        return false;
+                    }
+                }
+                if(isset($params[$j][$k+1][0])) {
+                    echo "Недопустимое обьявление.\n";
+                    $i = $params[$j][$k][1];
+                    return false;
+                }
+                if(!in_array($type, $types)) {
+                    echo "Недопустимый тип.\n";
+                    $i = $params[$j][$k-1][1];
+                    return false;
+                }
+                if(!empty($currentFunc['args'])) {
+                    foreach ($currentFunc['args'] as $arg) {
+                        if(isset($arg['id']) && $arg['id'] === $params[$j][$k][0]) {
+                            echo "Параметр  таким именем уже существует.\n";
+                            $i = $params[$j][$k-1][1];
+                            return false;
+                        }
+                    }
+                }
+                $currentFunc['args'][] = ['id' => $params[$j][$k][0], 'type' => $type];
+                $type = '';
+            }
+        }
+        if(!empty($type)) {
+            $currentFunc['args'][] = ['type' => $type];
+            $type = '';
+        }
+    }
+    $stackWords = [];
+    return true;
+}
+function A6() {
+    global $stackWords;
+    global $i;
+    $stackWords[] = [',', $i-1];
+    return true;
+}
+function A7() {
+    global $currentFunc;
+    global $currentNamespace;
+    global $structProgram;
+    if(empty($currentNamespace)) {
+        foreach ($structProgram['global']['funcs'] as $func) {
+            if($func['id'] === $currentFunc['id']) {
+                if(!isset($func['args']) && !isset($currentFunc['args'])) {
+                    echo "Функция {$currentFunc['id']} уже есть.\n";
+                    return false;
+                }
+                if(@count($func['args']) === @count($currentFunc['args'])) {
+                    $argsOne = '';
+                    $argsTwo = '';
+                    foreach ($func['args'] as $arg) {
+                        if(isset($arg['type'])) $argsOne .= $arg['type'];
+                    }
+                    foreach ($currentFunc['args'] as $arg) {
+                        if(isset($arg['type'])) $argsTwo .= $arg['type'];
+                    }
+                    if($argsOne === $argsTwo) {
+                        echo "Функция {$currentFunc['id']} уже есть.\n";
+                        return false;
+                    }
+                }
+            }
+        }
+        $structProgram['global']['funcs'][] = $currentFunc;
+    }else {
+        if(isset($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['funcs'])) {
+            foreach ($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['funcs'] as $func) {
+                if($func['id'] === $currentFunc['id']) {
+                    @count($func['args']);
+                    if(!isset($func['args']) && !isset($currentFunc['args'])) {
+                        echo "Функция {$currentFunc['id']} уже есть.\n";
+                        return false;
+                    }
+                    if(@count($func['args']) === @count($currentFunc['args'])) {
+                        $argsOne = '';
+                        $argsTwo = '';
+                        foreach ($func['args'] as $arg) {
+                            if(isset($arg['type'])) $argsOne .= $arg['type'];
+                        }
+                        foreach ($currentFunc['args'] as $arg) {
+                            if(isset($arg['type'])) $argsTwo .= $arg['type'];
+                        }
+                        if($argsOne === $argsTwo) {
+                            echo "Функция {$currentFunc['id']} уже есть.\n";
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        $structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['funcs'][] = $currentFunc;
+    }
+    $currentFunc = [];
+    return true;
+}
+function A8(){
+    global $currentFunc;
+    global $currentNamespace;
+    global $structProgram;
+    if(empty($currentNamespace)) {
+        $structProgram['global']['prototypes'][] = $currentFunc;
+    }else {
+        $structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['prototypes'][] = $currentFunc;
+    }
+    $currentFunc = [];
+    return true;
+}
+function A9(){
+    global $currentNamespace;
+    array_pop($currentNamespace);
     return true;
 }
 
