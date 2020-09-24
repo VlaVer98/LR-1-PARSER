@@ -156,7 +156,7 @@ function A3() {
         return false;
     }
     $word = $stackWords[1][0];
-    $match = preg_match ('/^[_[:alpha:]][[:alnum:]_]*/', $stackWords[1][0]);
+    $match = preg_match ('/^[_[:alpha:]][[:alnum:]_]*$/', $stackWords[1][0]);
     if(in_array($stackWords[1][0], $keywords)) {
         echo "{$stackWords[1][0]} является зарезервированным именем!\n";
         $i = $stackWords[1][1];
@@ -201,7 +201,8 @@ function A3() {
                 }
             }
         }
-        $structProgram['local'][$currentNamespace[(count($currentNamespace)-1)]]['namespaces'][] = $stackWords[1][0];
+        $fullName = implode('.', $currentNamespace);
+        $structProgram['local'][$fullName]['namespaces'][] = $stackWords[1][0];
     }
     $currentNamespace[] = $stackWords[1][0];
     $stackWords = [];
@@ -224,7 +225,7 @@ function A4() {
         $i = $stackWords[count($stackWords)-1][1];
         return false;
     }
-    $match = preg_match ('/^[_[:alpha:]][[:alnum:]_]*/', $name[0]);
+    $match = preg_match ('/^[_[:alpha:]][[:alnum:]_]*$/', $name[0]);
     if(in_array($name[0], $keywords)) {
         echo "{$name[0]} является зарезервированным именем.\n";
         $i = $name[1];
@@ -243,8 +244,9 @@ function A4() {
             }
         }
     }else {
-        if(isset($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['namespaces'])) {
-            foreach ($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['namespaces'] as $nameNamespace) {
+        $fullName = implode('.', $currentNamespace);
+        if(isset($structProgram['local'][$fullName]['namespaces'])) {
+            foreach ($structProgram['local'][$fullName]['namespaces'] as $nameNamespace) {
                 if($nameNamespace === $name[0]) {
                     echo "{$name[0]} конфликт имен!\n";
                     $i = $name[1];
@@ -384,8 +386,9 @@ function A7() {
         }
         $structProgram['global']['funcs'][] = $currentFunc;
     }else {
-        if(isset($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['funcs'])) {
-            foreach ($structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['funcs'] as $func) {
+        $fullName = implode('.', $currentNamespace);
+        if(isset($structProgram['local'][$fullName]['funcs'])) {
+            foreach ($structProgram['local'][$fullName]['funcs'] as $func) {
                 if($func['id'] === $currentFunc['id']) {
                     @count($func['args']);
                     if(!isset($func['args']) && !isset($currentFunc['args'])) {
@@ -409,7 +412,8 @@ function A7() {
                 }
             }
         }
-        $structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['funcs'][] = $currentFunc;
+        $fullName = implode('.', $currentNamespace);
+        $structProgram['local'][$fullName]['funcs'][] = $currentFunc;
     }
     $currentFunc = [];
     return true;
@@ -421,7 +425,8 @@ function A8(){
     if(empty($currentNamespace)) {
         $structProgram['global']['prototypes'][] = $currentFunc;
     }else {
-        $structProgram['local'][$currentNamespace[count($currentNamespace)-1]]['prototypes'][] = $currentFunc;
+        $fullName = implode('.', $currentNamespace);
+        $structProgram['local'][$fullName]['prototypes'][] = $currentFunc;
     }
     $currentFunc = [];
     return true;
